@@ -1,0 +1,26 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: |
+          Z=$(find . -maxdepth 2 -iname '*.zip' | head -n1)
+          if [ -z "$Z" ]; then echo "ZIP не найден в репозитории"; exit 1; fi
+          mkdir -p /tmp/src && unzip -q "$Z" -d /tmp/src
+          S=$(find /tmp/src -name settings.gradle.kts | head -n1)
+          echo "ROOT=$(dirname "$S")" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: 8.9 }
+      - name: Build
+        run: cd "$ROOT" && gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AlteCam-apk
+          path: ${{ env.ROOT }}/app/build/outputs/apk/debug/app-debug.apk
